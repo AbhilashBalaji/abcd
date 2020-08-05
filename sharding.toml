@@ -1,11 +1,14 @@
 [[shards]]
-name  = "sha0"
+name  = "sh0"
 idx = 0
+Address = "localhost:8080"
 
 [[shards]]
-name  = "sha1"
+name  = "sh1"
 idx = 1
+Address = "localhost:8081"
 
 [[shards]]
-name  = "sha2"
+name  = "sh2"
 idx = 2
+Address = "localhost:8082"

@@ -41,8 +41,11 @@ func main() {
 
 	var shardCount int
 	var shardIdx int = -1
+	var addrs = make(map[int]string)
 
 	for _, s := range c.Shards {
+		addrs[s.Idx] = s.Address
+
 		if s.Idx+1 > shardCount {
 			shardCount = s.Idx + 1
 		}
@@ -64,7 +67,7 @@ func main() {
 	}
 
 	defer close()
-	srv := web.NewServer(db, shardIdx, shardCount)
+	srv := web.NewServer(db, shardIdx, shardCount, addrs)
 	http.HandleFunc("/get", srv.GetHandler)
 	http.HandleFunc("/set", srv.SetHandler)
 
