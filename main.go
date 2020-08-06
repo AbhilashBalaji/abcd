@@ -7,7 +7,6 @@ import (
 	"github.com/AbhilashBalaji/abcd/config"
 	"github.com/AbhilashBalaji/abcd/db"
 	"github.com/AbhilashBalaji/abcd/web"
-	"github.com/BurntSushi/toml"
 
 	http "net/http"
 )
@@ -33,41 +32,22 @@ func parseFlags() {
 func main() {
 	parseFlags()
 
-	var c config.Config
-
-	if _, err := toml.DecodeFile(*configFile, &c); err != nil {
-		log.Fatalf("toml.DecodeFile(%q): %v", *configFile, err)
+	c, err := config.ParseFile(*configFile)
+	shards, err := config.ParseShards(c.Shards, *shard)
+	if err != nil {
+		log.Fatalf("Error parsing shards config %q: %v", *configFile, err)
 	}
 
-	var shardCount int
-	var shardIdx int = -1
-	var addrs = make(map[int]string)
-
-	for _, s := range c.Shards {
-		addrs[s.Idx] = s.Address
-
-		if s.Idx+1 > shardCount {
-			shardCount = s.Idx + 1
-		}
-		if s.Name == *shard {
-			shardIdx = s.Idx
-		}
-	}
-
-	if shardIdx < 0 {
-		log.Fatalf("Shard %q was not found", *shard)
-	}
-
-	log.Printf("Shard count is %d , current shard : %d", shardCount, shardIdx)
+	log.Printf("Shard count is %d , current shard : %d", shards.Count, shards.CurIdx)
 
 	db, close, err := db.NewDatabase(*dbLocation)
 
 	if err != nil {
-		log.Fatalf("NewDatabase(%q): %v", *dbLocation, err)
+		log.Fatalf("error creating NewDatabase(%q): %v", *dbLocation, err)
 	}
 
 	defer close()
-	srv := web.NewServer(db, shardIdx, shardCount, addrs)
+	srv := web.NewServer(db, shards)
 	http.HandleFunc("/get", srv.GetHandler)
 	http.HandleFunc("/set", srv.SetHandler)
 
