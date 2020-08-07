@@ -50,6 +50,7 @@ func main() {
 	srv := web.NewServer(db, shards)
 	http.HandleFunc("/get", srv.GetHandler)
 	http.HandleFunc("/set", srv.SetHandler)
+	http.HandleFunc("/purge", srv.DeleteExtraKeysHandler)
 
 	// hash(key) % <count> := shardIdx
 

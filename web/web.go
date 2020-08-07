@@ -2,7 +2,6 @@ package web
 
 import (
 	"fmt"
-	"hash/fnv"
 	"io"
 	"net/http"
 
@@ -45,7 +44,7 @@ func (s *Server) GetHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	key := r.Form.Get("key")
 
-	shard := s.getShard(key)
+	shard := s.shards.Index(key)
 
 	value, err := s.db.GetKey(key)
 	if shard != s.shards.CurIdx {
@@ -53,14 +52,8 @@ func (s *Server) GetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprintf(w, "Shard = %d, Current shard = %d,addr = %q Value = %q , error = %v", shard, s.shards.CurIdx, s.shards.Addrs[shard], value, err)
+	fmt.Fprintf(w, "Shard = %d, current shard = %d, addr = %q, Value = %q, error = %v", shard, s.shards.CurIdx, s.shards.Addrs[shard], value, err)
 
-}
-
-func (s *Server) getShard(key string) int {
-	h := fnv.New64()
-	h.Write([]byte(key))
-	return int(h.Sum64() % uint64(s.shards.Count))
 }
 
 // SetHandler handles "WRITE" endpoint
@@ -70,7 +63,7 @@ func (s *Server) SetHandler(w http.ResponseWriter, r *http.Request) {
 	key := r.Form.Get("key")
 	value := r.Form.Get("value")
 
-	shard := s.getShard(key)
+	shard := s.shards.Index(key)
 	if shard != s.shards.CurIdx {
 		s.redirect(shard, w, r)
 		return
@@ -79,4 +72,11 @@ func (s *Server) SetHandler(w http.ResponseWriter, r *http.Request) {
 	err := s.db.SetKey(key, []byte(value))
 	fmt.Fprintf(w, "Error = %v, shardIdx = %d, current shard = %d", err, shard, s.shards.CurIdx)
 
+}
+
+// DeleteExtraKeysHandler handles "WRITE" endpoint
+func (s *Server) DeleteExtraKeysHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "Error = %v", s.db.DeleteExtraKeys(func(key string) bool {
+		return s.shards.Index(key) != s.shards.CurIdx
+	}))
 }
