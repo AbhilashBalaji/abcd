@@ -74,7 +74,7 @@ func (s *Server) SetHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-// DeleteExtraKeysHandler handles "WRITE" endpoint
+// DeleteExtraKeysHandler handles "Purge" endpoint
 func (s *Server) DeleteExtraKeysHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Error = %v", s.db.DeleteExtraKeys(func(key string) bool {
 		return s.shards.Index(key) != s.shards.CurIdx
