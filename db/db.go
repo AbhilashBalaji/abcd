@@ -20,6 +20,9 @@ func NewDatabase(dbPath string) (db *Database, closeFunc func() error, err error
 	if err != nil {
 		return nil, nil, err
 	}
+	// Disk sync flushes data from disc to DB , good idea to keep it
+	// if you're not cool with loosing data ; it does speed it up tho if you dont
+	// boltDb.NoSync = true
 
 	db = &Database{db: boltDb}
 	closeFunc = boltDb.Close

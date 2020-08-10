@@ -1,20 +1,20 @@
 [[shards]]
 name  = "sh0"
 idx = 0
-Address = "localhost:8080"
+Address = "127.0.0.2:8080"
 
 [[shards]]
 name  = "sh1"
 idx = 1
-Address = "localhost:8081"
+Address = "127.0.0.3:8080"
 
 [[shards]]
 name  = "sh2"
 idx = 2
-Address = "localhost:8082"
+Address = "127.0.0.4:8080"
 
 
 [[shards]]
 name  = "sh3"
 idx = 3
-Address = "localhost:8083"
+Address = "127.0.0.5:8080"
