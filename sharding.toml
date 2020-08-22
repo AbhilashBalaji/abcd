@@ -2,19 +2,25 @@
 name  = "sh0"
 idx = 0
 Address = "127.0.0.2:8080"
+replicas = ["127.0.0.22:8080"]
 
 [[shards]]
 name  = "sh1"
 idx = 1
 Address = "127.0.0.3:8080"
+replicas = ["127.0.0.33:8080"]
+
 
 [[shards]]
 name  = "sh2"
 idx = 2
 Address = "127.0.0.4:8080"
+replicas = ["127.0.0.44:8080"]
+
 
 
 [[shards]]
 name  = "sh3"
 idx = 3
 Address = "127.0.0.5:8080"
+replicas = ["127.0.0.55:8080"]

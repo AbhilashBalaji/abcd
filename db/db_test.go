@@ -9,6 +9,24 @@ import (
 	"github.com/AbhilashBalaji/abcd/db"
 )
 
+func createTempDb(t *testing.T, readOnly bool) *db.Database {
+	t.Helper()
+	f, err := ioutil.TempFile(os.TempDir(), "abcdDB")
+	if err != nil {
+		t.Fatalf("could not create temp file: %v", err)
+	}
+	name := f.Name()
+	f.Close()
+	t.Cleanup(func() { os.Remove(name) })
+
+	db, closeFunc, err := db.NewDatabase(name, readOnly)
+	if err != nil {
+		t.Fatalf("could not create a new database :%v", err)
+	}
+	t.Cleanup(func() { closeFunc() })
+	return db
+}
+
 func setKey(t *testing.T, d *db.Database, key, value string) {
 	t.Helper()
 	if err := d.SetKey(key, []byte(value)); err != nil {
@@ -29,18 +47,7 @@ func getKey(t *testing.T, d *db.Database, key string) string {
 }
 
 func TestGetSet(t *testing.T) {
-	f, err := ioutil.TempFile(os.TempDir(), "abcdDB")
-	if err != nil {
-		t.Fatalf("could not create temp file: %v", err)
-	}
-	name := f.Name()
-	defer f.Close()
-	defer os.Remove(name)
-	db, closeFunc, err := db.NewDatabase(name)
-	if err != nil {
-		t.Fatalf("could not create a new database :%v", err)
-	}
-	defer closeFunc()
+	db := createTempDb(t, false)
 
 	setKey(t, db, "name", "Jeff")
 
@@ -55,22 +62,48 @@ func TestGetSet(t *testing.T) {
 	if !bytes.Equal(value, []byte("moment")) {
 		t.Errorf(`Unexpected value for key "bruh": got %q , want %q`, value, "moment")
 	}
+	k, v, err := db.GetNextKeyForReplication()
+	if err != nil {
+		t.Fatalf(`Unexpected error for GetNextKeyForReplication(): %v`, err)
+	}
+	if !bytes.Equal(k, []byte("bruh")) || !bytes.Equal(v, []byte("moment")) {
+		t.Errorf(`GetNextKeyForReplication(): got %q, %q; want %q, %q`, k, v, "bruh", "moment")
+	}
 
 }
+func TestDeleteReplicationKey(t *testing.T) {
+	db := createTempDb(t, false)
 
+	setKey(t, db, "party", "Great")
+
+	k, v, err := db.GetNextKeyForReplication()
+	if err != nil {
+		t.Fatalf(`Unexpected error for GetNextKeyForReplication(): %v`, err)
+	}
+
+	if !bytes.Equal(k, []byte("party")) || !bytes.Equal(v, []byte("Great")) {
+		t.Errorf(`GetNextKeyForReplication(): got %q, %q; want %q, %q`, k, v, "party", "Great")
+	}
+
+	if err := db.DeleteReplicationKey([]byte("party"), []byte("Bad")); err == nil {
+		t.Fatalf(`DeleteReplicationKey("party", "Bad"): got nil error, want non-nil error`)
+	}
+
+	if err := db.DeleteReplicationKey([]byte("party"), []byte("Great")); err != nil {
+		t.Fatalf(`DeleteReplicationKey("party", "Great"): got %q, want nil error`, err)
+	}
+
+	k, v, err = db.GetNextKeyForReplication()
+	if err != nil {
+		t.Fatalf(`Unexpected error for GetNextKeyForReplication(): %v`, err)
+	}
+
+	if k != nil || v != nil {
+		t.Errorf(`GetNextKeyForReplication(): got %v, %v; want nil, nil`, k, v)
+	}
+}
 func TestDeleteExtraKeys(t *testing.T) {
-	f, err := ioutil.TempFile(os.TempDir(), "abcdDB")
-	if err != nil {
-		t.Fatalf("could not create temp file: %v", err)
-	}
-	name := f.Name()
-	defer f.Close()
-	defer os.Remove(name)
-	db, closeFunc, err := db.NewDatabase(name)
-	if err != nil {
-		t.Fatalf("could not create a new database :%v", err)
-	}
-	defer closeFunc()
+	db := createTempDb(t, false)
 
 	setKey(t, db, "name", "Jeff")
 	setKey(t, db, "foo", "bar")
@@ -87,4 +120,12 @@ func TestDeleteExtraKeys(t *testing.T) {
 		t.Errorf(`unexpected value for key "name": got %q , want %q`, value, "")
 	}
 
+}
+
+func TestSetReadOnly(t *testing.T) {
+	db := createTempDb(t, true)
+
+	if err := db.SetKey("bruh", []byte("moment")); err == nil {
+		t.Fatalf("SetKey(%q, %q): got nil error, want non-nil error", []byte("moment"), err)
+	}
 }
