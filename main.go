@@ -6,6 +6,7 @@ import (
 
 	"github.com/AbhilashBalaji/abcd/config"
 	"github.com/AbhilashBalaji/abcd/db"
+	"github.com/AbhilashBalaji/abcd/replication"
 	"github.com/AbhilashBalaji/abcd/web"
 
 	http "net/http"
@@ -48,6 +49,15 @@ func main() {
 	}
 
 	defer close()
+
+	if *replica {
+		leaderAddr, ok := shards.Addrs[shards.CurIdx]
+		if !ok {
+			log.Fatalf("Could not find address for leader for shard %d", shards.CurIdx)
+		}
+		go replication.ClientLoop(db, leaderAddr)
+	}
+
 	srv := web.NewServer(db, shards)
 	http.HandleFunc("/get", srv.GetHandler)
 	http.HandleFunc("/set", srv.SetHandler)
